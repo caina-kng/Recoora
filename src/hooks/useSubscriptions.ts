@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Subscription, FilterOptions, SupportedCurrency } from '../types';
+import { Subscription, FilterOptions } from '../types';
 import { INITIAL_SUBSCRIPTIONS } from '../data/initialData';
 import { advanceBillingDate, getDaysUntil, getMonthlyEquivalent } from '../utils/calculations';
 
 const STORAGE_KEY = 'recorra_subscriptions_v2';
-const CURRENCY_KEY = 'recorra_preferred_currency';
 const ONBOARDING_KEY = 'recorra_onboarding_completed';
 
-export function useSubscriptions(convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number) {
+export function useSubscriptions() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -29,16 +28,6 @@ export function useSubscriptions(convertFn?: (amount: number, from: SupportedCur
     return INITIAL_SUBSCRIPTIONS;
   });
 
-  const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(CURRENCY_KEY) as SupportedCurrency;
-      if (saved && ['BRL', 'USD', 'EUR'].includes(saved)) {
-        return saved;
-      }
-    }
-    return 'BRL';
-  });
-
   const [filters, setFilters] = useState<FilterOptions>({
     category: 'all',
     status: 'all',
@@ -54,14 +43,6 @@ export function useSubscriptions(convertFn?: (amount: number, from: SupportedCur
       console.error('Error saving subscriptions to localStorage:', err);
     }
   }, [subscriptions]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(CURRENCY_KEY, preferredCurrency);
-    } catch (err) {
-      console.error('Error saving preferred currency:', err);
-    }
-  }, [preferredCurrency]);
 
   const addSubscription = (newSub: Omit<Subscription, 'id' | 'createdAt'>) => {
     const subscription: Subscription = {
@@ -179,11 +160,8 @@ export function useSubscriptions(convertFn?: (amount: number, from: SupportedCur
         return true;
       })
       .sort((a, b) => {
-        const getSubMonthlyInPreferred = (sub: Subscription) => {
-          const rawAmount = sub.amount;
-          const subCurr = sub.currency || preferredCurrency;
-          const converted = convertFn ? convertFn(rawAmount, subCurr, preferredCurrency) : rawAmount;
-          return getMonthlyEquivalent(converted, sub.billingCycle);
+        const getSubMonthly = (sub: Subscription) => {
+          return getMonthlyEquivalent(sub.amount, sub.billingCycle);
         };
 
         switch (filters.sortBy) {
@@ -192,16 +170,16 @@ export function useSubscriptions(convertFn?: (amount: number, from: SupportedCur
           case 'date_desc':
             return new Date(b.nextBillingDate).getTime() - new Date(a.nextBillingDate).getTime();
           case 'amount_desc':
-            return getSubMonthlyInPreferred(b) - getSubMonthlyInPreferred(a);
+            return getSubMonthly(b) - getSubMonthly(a);
           case 'amount_asc':
-            return getSubMonthlyInPreferred(a) - getSubMonthlyInPreferred(b);
+            return getSubMonthly(a) - getSubMonthly(b);
           case 'name_asc':
             return a.name.localeCompare(b.name, 'pt-BR');
           default:
             return 0;
         }
       });
-  }, [subscriptions, filters, preferredCurrency, convertFn]);
+  }, [subscriptions, filters]);
 
   // Urgent upcoming renewals (Active & next 3 days)
   const urgentRenewals = useMemo(() => {
@@ -233,8 +211,6 @@ export function useSubscriptions(convertFn?: (amount: number, from: SupportedCur
     activeTrials,
     filters,
     setFilters,
-    preferredCurrency,
-    setPreferredCurrency,
     addSubscription,
     updateSubscription,
     deleteSubscription,

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Plus, Sun, Moon, Download, User } from 'lucide-react';
-import { SupportedCurrency, UserProfile } from '../types';
+import { Plus, Sun, Moon, Download } from 'lucide-react';
+import { UserProfile } from '../types';
 
 interface HeaderProps {
   theme: 'light' | 'dark';
@@ -8,9 +8,6 @@ interface HeaderProps {
   onOpenNewModal: () => void;
   onOpenExportImport: () => void;
   onOpenAccountModal: () => void;
-  preferredCurrency: SupportedCurrency;
-  setPreferredCurrency: (c: SupportedCurrency) => void;
-  isLoadingRates?: boolean;
   totalActiveCount: number;
   userProfile?: UserProfile | null;
 }
@@ -21,9 +18,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNewModal,
   onOpenExportImport,
   onOpenAccountModal,
-  preferredCurrency,
-  setPreferredCurrency,
-  isLoadingRates = false,
   totalActiveCount,
   userProfile,
 }) => {
@@ -34,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
       <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8">
         
-        {/* DESKTOP HEADER (sm:flex) - Preserved exactly */}
+        {/* DESKTOP HEADER (sm:flex) */}
         <div className="hidden sm:flex items-center justify-between h-20">
           
           {/* Logo & Brand Identity */}
@@ -54,10 +48,10 @@ export const Header: React.FC<HeaderProps> = ({
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {userProfile?.name ? (
                   <>
-                    Olá, <span className="font-semibold text-slate-700 dark:text-slate-300">{firstName}</span> &bull; Gestão inteligente de assinaturas
+                    Olá, <span className="font-semibold text-slate-700 dark:text-slate-300">{firstName}</span> &bull; Gestão de assinaturas em Reais (R$)
                   </>
                 ) : (
-                  'Gestão inteligente de assinaturas & recorrências'
+                  'Gestão inteligente de assinaturas & recorrências em Real (R$)'
                 )}
               </p>
             </div>
@@ -66,24 +60,6 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Desktop Actions & Utilities */}
           <div className="flex items-center gap-2.5 lg:gap-3">
             
-            {/* Currency Selector */}
-            <div className="relative flex items-center">
-              <select
-                id="currency-selector"
-                value={preferredCurrency}
-                onChange={(e) => setPreferredCurrency(e.target.value as SupportedCurrency)}
-                className="appearance-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold rounded-lg px-2.5 py-1.5 pr-6 cursor-pointer border border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
-                title={`Moeda de visualização: ${preferredCurrency} (Cotação automática Frankfurter)`}
-              >
-                <option value="BRL">R$ (BRL)</option>
-                <option value="USD">$ (USD)</option>
-                <option value="EUR">€ (EUR)</option>
-              </select>
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
-                {isLoadingRates ? '⏳' : '▼'}
-              </span>
-            </div>
-
             {/* Backup / Export Import */}
             <button
               id="btn-export-import"
@@ -137,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         </div>
 
-        {/* MOBILE HEADER (sm:hidden) - Multi-line responsive structure */}
+        {/* MOBILE HEADER (sm:hidden) - Balanced multi-line structure */}
         <div className="sm:hidden py-2.5 space-y-2.5">
           
           {/* Mobile Line 1: Logo + "Recorra" Title + Profile Account Button */}
@@ -170,32 +146,18 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Mobile Line 2: Grouped Utilities (Currency, Export/Import, Theme Toggle) */}
+          {/* Mobile Line 2: Utilities (Backup and Theme toggle balanced) */}
           <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
-            {/* Currency Selector */}
-            <div className="relative flex-1 max-w-[130px]">
-              <select
-                id="currency-selector-mobile"
-                value={preferredCurrency}
-                onChange={(e) => setPreferredCurrency(e.target.value as SupportedCurrency)}
-                className="w-full appearance-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 pr-6 cursor-pointer border border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
-                title={`Moeda: ${preferredCurrency}`}
-              >
-                <option value="BRL">R$ (BRL)</option>
-                <option value="USD">$ (USD)</option>
-                <option value="EUR">€ (EUR)</option>
-              </select>
-              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
-                {isLoadingRates ? '⏳' : '▼'}
-              </span>
-            </div>
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              Valores em Real (R$)
+            </span>
 
             {/* Utility Actions Group */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 id="btn-export-import-mobile"
                 onClick={onOpenExportImport}
-                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg bg-slate-100 dark:bg-slate-800 transition-colors flex items-center gap-1 px-2 text-xs font-medium"
+                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg bg-slate-100 dark:bg-slate-800 transition-colors flex items-center gap-1 px-2.5 text-xs font-medium"
                 title="Backup e Exportação"
                 aria-label="Backup"
               >
@@ -206,14 +168,20 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 id="theme-toggle-btn-mobile"
                 onClick={toggleTheme}
-                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg bg-slate-100 dark:bg-slate-800 transition-colors"
+                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg bg-slate-100 dark:bg-slate-800 transition-colors flex items-center gap-1 px-2.5 text-xs font-medium"
                 title={theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}
                 aria-label="Alternar tema"
               >
                 {theme === 'dark' ? (
-                  <Sun className="w-4 h-4 text-amber-400" />
+                  <>
+                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Claro</span>
+                  </>
                 ) : (
-                  <Moon className="w-4 h-4 text-slate-600" />
+                  <>
+                    <Moon className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Escuro</span>
+                  </>
                 )}
               </button>
             </div>

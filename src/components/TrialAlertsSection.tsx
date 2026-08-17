@@ -1,12 +1,10 @@
 import React from 'react';
-import { Sparkles, Clock, AlertCircle, ArrowUpRight, Check, XCircle } from 'lucide-react';
-import { Subscription, SupportedCurrency } from '../types';
+import { Sparkles, ArrowUpRight, Check, XCircle } from 'lucide-react';
+import { Subscription } from '../types';
 import { getDaysUntil, formatCurrency, formatDate } from '../utils/calculations';
 
 interface TrialAlertsSectionProps {
   subscriptions: Subscription[];
-  preferredCurrency: SupportedCurrency;
-  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number;
   onConvertTrial: (id: string) => void;
   onCancelSubscription: (id: string) => void;
   onEdit: (sub: Subscription) => void;
@@ -14,8 +12,6 @@ interface TrialAlertsSectionProps {
 
 export const TrialAlertsSection: React.FC<TrialAlertsSectionProps> = ({
   subscriptions,
-  preferredCurrency,
-  convertFn,
   onConvertTrial,
   onCancelSubscription,
   onEdit,
@@ -55,10 +51,6 @@ export const TrialAlertsSection: React.FC<TrialAlertsSectionProps> = ({
           const expirationDate = sub.trialEndsAt || sub.nextBillingDate;
           const daysLeft = getDaysUntil(expirationDate);
           const isUrgent = daysLeft >= 0 && daysLeft <= 3;
-
-          const rawCurrency = sub.currency || preferredCurrency;
-          const isConverted = rawCurrency !== preferredCurrency;
-          const convertedAmount = convertFn ? convertFn(sub.amount, rawCurrency, preferredCurrency) : sub.amount;
 
           return (
             <div
@@ -107,12 +99,7 @@ export const TrialAlertsSection: React.FC<TrialAlertsSectionProps> = ({
                   Cobrança após o teste:
                 </span>
                 <span className="font-bold text-slate-900 dark:text-white text-right">
-                  {formatCurrency(convertedAmount, preferredCurrency)}
-                  {isConverted && (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-1 font-normal">
-                      ({formatCurrency(sub.amount, rawCurrency)})
-                    </span>
-                  )}{' '}
+                  {formatCurrency(sub.amount)}{' '}
                   / {sub.billingCycle === 'yearly' ? 'ano' : sub.billingCycle === 'weekly' ? 'semana' : 'mês'}
                 </span>
               </div>

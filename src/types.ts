@@ -12,13 +12,13 @@ export type SubscriptionCategory =
 
 export type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
 
-export type SupportedCurrency = 'BRL' | 'USD' | 'EUR';
+export type SupportedCurrency = 'BRL';
 
 export interface Subscription {
   id: string;
   name: string;
   amount: number;
-  currency: SupportedCurrency;
+  currency?: SupportedCurrency;
   billingCycle: BillingCycle;
   nextBillingDate: string; // ISO date format YYYY-MM-DD
   category: SubscriptionCategory;

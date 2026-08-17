@@ -8,12 +8,9 @@ import {
   Check,
   Calendar,
   ExternalLink,
-  Clock,
   Sparkles,
-  AlertCircle,
-  Repeat,
 } from 'lucide-react';
-import { Subscription, SupportedCurrency } from '../types';
+import { Subscription } from '../types';
 import {
   formatCurrency,
   formatDate,
@@ -26,8 +23,6 @@ import { CategoryIcon } from './CategoryIcon';
 
 interface SubscriptionCardProps {
   subscription: Subscription;
-  preferredCurrency: SupportedCurrency;
-  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number;
   onEdit: (sub: Subscription) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string) => void;
@@ -36,8 +31,6 @@ interface SubscriptionCardProps {
 
 export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   subscription,
-  preferredCurrency,
-  convertFn,
   onEdit,
   onDelete,
   onToggleStatus,
@@ -60,10 +53,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
     };
   }, [showMenu]);
 
-  const rawCurrency = subscription.currency || preferredCurrency;
-  const isConverted = rawCurrency !== preferredCurrency;
-  const convertedAmount = convertFn ? convertFn(subscription.amount, rawCurrency, preferredCurrency) : subscription.amount;
-  const convertedMonthlyEquivalent = getMonthlyEquivalent(convertedAmount, subscription.billingCycle);
+  const monthlyEquivalent = getMonthlyEquivalent(subscription.amount, subscription.billingCycle);
 
   const categoryMeta = CATEGORIES[subscription.category] || CATEGORIES.outros;
   const daysUntil = getDaysUntil(subscription.nextBillingDate);
@@ -246,26 +236,18 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
           <div>
             <div className="flex items-baseline">
               <span className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                {formatCurrency(convertedAmount, preferredCurrency)}
+                {formatCurrency(subscription.amount)}
               </span>
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-1">
                 {cycleLabel}
               </span>
             </div>
-            {isConverted && (
-              <span
-                className="inline-block text-[11px] font-medium text-slate-400 dark:text-slate-500"
-                title={`Valor original cadastrado: ${formatCurrency(subscription.amount, rawCurrency)}`}
-              >
-                ({formatCurrency(subscription.amount, rawCurrency)})
-              </span>
-            )}
           </div>
 
           {/* Monthly equivalent indicator if yearly/weekly */}
           {subscription.billingCycle !== 'monthly' && (
             <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium text-right" title="Equivalente mensal">
-              ~{formatCurrency(convertedMonthlyEquivalent, preferredCurrency)}/mês
+              ~{formatCurrency(monthlyEquivalent)}/mês
             </span>
           )}
         </div>

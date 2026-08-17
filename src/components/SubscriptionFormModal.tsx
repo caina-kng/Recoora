@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Calendar, DollarSign, Tag, Check, Info, Trash2 } from 'lucide-react';
+import { X, Calendar, Tag, Check, Info, Trash2, Sparkles } from 'lucide-react';
 import {
   Subscription,
   SubscriptionCategory,
   BillingCycle,
   SubscriptionStatus,
-  SupportedCurrency,
 } from '../types';
 import { CATEGORIES, POPULAR_PRESETS, SubscriptionPreset } from '../data/categories';
 import { CategoryIcon } from './CategoryIcon';
@@ -16,7 +15,6 @@ interface SubscriptionFormModalProps {
   onSave: (data: Omit<Subscription, 'id' | 'createdAt'>) => void;
   onDelete?: (id: string) => void;
   editingSubscription?: Subscription | null;
-  preferredCurrency: SupportedCurrency;
 }
 
 export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
@@ -25,11 +23,9 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
   onSave,
   onDelete,
   editingSubscription,
-  preferredCurrency,
 }) => {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState<SupportedCurrency>(preferredCurrency);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [nextBillingDate, setNextBillingDate] = useState('');
   const [category, setCategory] = useState<SubscriptionCategory>('streaming');
@@ -46,7 +42,6 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     if (editingSubscription) {
       setName(editingSubscription.name);
       setAmount(editingSubscription.amount.toString());
-      setCurrency(editingSubscription.currency || preferredCurrency);
       setBillingCycle(editingSubscription.billingCycle);
       setNextBillingDate(editingSubscription.nextBillingDate);
       setCategory(editingSubscription.category);
@@ -61,7 +56,6 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
       // Default new subscription values
       setName('');
       setAmount('');
-      setCurrency(preferredCurrency);
       setBillingCycle('monthly');
       
       // Default next billing date: 30 days from now or next month
@@ -81,7 +75,7 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
       setColor('#0d9488');
       setErrors({});
     }
-  }, [editingSubscription, isOpen, preferredCurrency]);
+  }, [editingSubscription, isOpen]);
 
   if (!isOpen) return null;
 
@@ -125,7 +119,7 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
     onSave({
       name: name.trim(),
       amount: parsedAmount,
-      currency,
+      currency: 'BRL',
       billingCycle,
       nextBillingDate,
       category,
@@ -215,21 +209,24 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
             {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name}</p>}
           </div>
 
-          {/* Valor, Moeda e Ciclo */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Valor (R$) e Ciclo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Valor */}
-            <div className="sm:col-span-1">
+            <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Valor *
+                Valor (R$) *
               </label>
               <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400 dark:text-slate-500">
+                  R$
+                </span>
                 <input
                   id="sub-input-amount"
                   type="text"
                   placeholder="0,00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                  className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                     errors.amount
                       ? 'border-rose-400 focus:ring-rose-500'
                       : 'border-slate-200 dark:border-slate-700'
@@ -237,23 +234,6 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                 />
               </div>
               {errors.amount && <p className="text-xs text-rose-500 mt-1">{errors.amount}</p>}
-            </div>
-
-            {/* Moeda */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Moeda
-              </label>
-              <select
-                id="sub-input-currency"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value as SupportedCurrency)}
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="BRL">R$ (BRL)</option>
-                <option value="USD">$ (USD)</option>
-                <option value="EUR">€ (EUR)</option>
-              </select>
             </div>
 
             {/* Ciclo de Cobrança */}
@@ -265,7 +245,7 @@ export const SubscriptionFormModal: React.FC<SubscriptionFormModalProps> = ({
                 id="sub-input-cycle"
                 value={billingCycle}
                 onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 <option value="monthly">Mensal</option>
                 <option value="yearly">Anual</option>

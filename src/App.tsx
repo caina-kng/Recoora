@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus } from 'lucide-react';
 import { useSubscriptions } from './hooks/useSubscriptions';
-import { useCurrencyRates } from './hooks/useCurrencyRates';
 import { useTheme } from './hooks/useTheme';
 import { Header } from './components/Header';
 import { DashboardSummary } from './components/DashboardSummary';
@@ -25,39 +24,11 @@ const USER_PROFILE_STORAGE_KEY = 'recorra_user_profile';
 export default function App() {
   const { theme, toggleTheme } = useTheme();
 
-  // Currency conversion engine with Frankfurter API + caching
-  const [activePreferredCurrency, setActivePreferredCurrency] = useState<'BRL' | 'USD' | 'EUR'>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('recorra_preferred_currency');
-        if (saved === 'BRL' || saved === 'USD' || saved === 'EUR') {
-          return saved;
-        }
-      } catch (err) {
-        console.error('Error reading currency from localStorage:', err);
-      }
-    }
-    return 'BRL';
-  });
-
-  const {
-    rates,
-    isLoading: isLoadingRates,
-    isError: isRatesError,
-    isUsingFallback,
-    convert,
-    refreshRates,
-  } = useCurrencyRates();
-
   const {
     subscriptions,
     filteredSubscriptions,
-    urgentRenewals,
-    activeTrials,
     filters,
     setFilters,
-    preferredCurrency,
-    setPreferredCurrency,
     addSubscription,
     updateSubscription,
     deleteSubscription,
@@ -67,13 +38,7 @@ export default function App() {
     resetToSampleData,
     clearAllSubscriptions,
     importSubscriptions,
-  } = useSubscriptions(convert);
-
-  // Sync preferred currency changes
-  const handlePreferredCurrencyChange = (newCurrency: 'BRL' | 'USD' | 'EUR') => {
-    setActivePreferredCurrency(newCurrency);
-    setPreferredCurrency(newCurrency);
-  };
+  } = useSubscriptions();
 
   // Onboarding & User Profile State
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(() => {
@@ -226,7 +191,7 @@ export default function App() {
       const newSub = addSubscription({
         name: preset.name,
         amount: preset.defaultAmount,
-        currency: preferredCurrency,
+        currency: 'BRL',
         billingCycle: preset.billingCycle,
         nextBillingDate: `${yyyy}-${mm}-${dd}`,
         category: preset.category,
@@ -310,9 +275,6 @@ export default function App() {
           onOpenNewModal={handleOpenAddModal}
           onOpenExportImport={() => setIsExportImportOpen(true)}
           onOpenAccountModal={() => setIsAccountModalOpen(true)}
-          preferredCurrency={preferredCurrency}
-          setPreferredCurrency={handlePreferredCurrencyChange}
-          isLoadingRates={isLoadingRates}
           totalActiveCount={subscriptions.filter((s) => s.status === 'active').length}
           userProfile={userProfile}
         />
@@ -323,9 +285,6 @@ export default function App() {
         {/* Top Spend Highlights & Metric Cards */}
         <DashboardSummary
           subscriptions={subscriptions}
-          preferredCurrency={preferredCurrency}
-          convertFn={convert}
-          isLoadingRates={isLoadingRates}
           onFilterByStatus={(status) => setFilters((prev) => ({ ...prev, status }))}
           onFilterByTrial={() => setFilters((prev) => ({ ...prev, status: 'trial' }))}
           onFilterByUrgent={handleFilterUrgent}
@@ -336,8 +295,6 @@ export default function App() {
         {/* Free Trials Highlight Section (if any active trials) */}
         <TrialAlertsSection
           subscriptions={subscriptions}
-          preferredCurrency={preferredCurrency}
-          convertFn={convert}
           onConvertTrial={handleConvertTrial}
           onCancelSubscription={handleCancelSubscription}
           onEdit={handleOpenEditModal}
@@ -348,15 +305,11 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <UpcomingRenewals
               subscriptions={subscriptions}
-              preferredCurrency={preferredCurrency}
-              convertFn={convert}
               onMarkAsPaid={handleMarkAsPaid}
               onEdit={handleOpenEditModal}
             />
             <CategoryChart
               subscriptions={subscriptions}
-              preferredCurrency={preferredCurrency}
-              convertFn={convert}
               selectedCategory={filters.category}
               onSelectCategory={handleSelectCategoryFromChart}
             />
@@ -379,8 +332,6 @@ export default function App() {
             filteredSubscriptions={filteredSubscriptions}
             filters={filters}
             setFilters={setFilters}
-            preferredCurrency={preferredCurrency}
-            convertFn={convert}
             onEdit={handleOpenEditModal}
             onDelete={handleOpenDeleteModal}
             onToggleStatus={handleToggleStatus}
@@ -420,7 +371,6 @@ export default function App() {
         onSave={handleSaveSubscription}
         onDelete={handleOpenDeleteModal}
         editingSubscription={editingSubscription}
-        preferredCurrency={preferredCurrency}
       />
 
       <DeleteConfirmModal

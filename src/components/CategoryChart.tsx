@@ -1,27 +1,22 @@
 import React from 'react';
-import { PieChart as PieIcon, Layers, ChevronRight } from 'lucide-react';
-import { Subscription, SupportedCurrency, SubscriptionCategory } from '../types';
+import { PieChart as PieIcon } from 'lucide-react';
+import { Subscription } from '../types';
 import { getCategoryBreakdown, formatCurrency } from '../utils/calculations';
 import { CATEGORIES } from '../data/categories';
 import { CategoryIcon } from './CategoryIcon';
 
 interface CategoryChartProps {
   subscriptions: Subscription[];
-  preferredCurrency: SupportedCurrency;
-  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number;
   selectedCategory: string;
   onSelectCategory: (cat: string) => void;
 }
 
 export const CategoryChart: React.FC<CategoryChartProps> = ({
   subscriptions,
-  preferredCurrency,
-  convertFn,
   selectedCategory,
   onSelectCategory,
 }) => {
-  const breakdown = getCategoryBreakdown(subscriptions, preferredCurrency, convertFn);
-  const totalMonthly = breakdown.reduce((acc, item) => acc + item.amount, 0);
+  const breakdown = getCategoryBreakdown(subscriptions);
 
   if (breakdown.length === 0) {
     return (
@@ -108,7 +103,7 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
 
                 <div className="text-right">
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    {formatCurrency(item.amount, preferredCurrency)}
+                    {formatCurrency(item.amount)}
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 ml-1.5">
                     ({item.percentage.toFixed(0)}%)

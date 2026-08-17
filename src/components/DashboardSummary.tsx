@@ -5,14 +5,10 @@ import {
   TrendingUp,
   AlertTriangle,
   Clock,
-  ArrowUpRight,
-  Sparkles,
   Check,
-  CheckCircle2,
-  PauseCircle,
   ChevronRight,
 } from 'lucide-react';
-import { Subscription, SupportedCurrency } from '../types';
+import { Subscription } from '../types';
 import {
   calculateTotals,
   formatCurrency,
@@ -20,13 +16,9 @@ import {
   getRelativeDateLabel,
   formatDate,
 } from '../utils/calculations';
-import { CATEGORIES } from '../data/categories';
 
 interface DashboardSummaryProps {
   subscriptions: Subscription[];
-  preferredCurrency: SupportedCurrency;
-  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number;
-  isLoadingRates?: boolean;
   onFilterByStatus?: (status: string) => void;
   onFilterByTrial?: () => void;
   onFilterByUrgent?: () => void;
@@ -36,17 +28,14 @@ interface DashboardSummaryProps {
 
 export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
   subscriptions,
-  preferredCurrency,
-  convertFn,
-  isLoadingRates = false,
   onFilterByStatus,
   onFilterByTrial,
   onFilterByUrgent,
   onEdit,
   onMarkAsPaid,
 }) => {
-  const { monthlyTotal, yearlyTotal, pausedSavings, activeCount, pausedCount, trialCount, totalCount } =
-    calculateTotals(subscriptions, preferredCurrency, convertFn);
+  const { monthlyTotal, yearlyTotal, pausedSavings, activeCount } =
+    calculateTotals(subscriptions);
 
   // Urgent renewals (active & due in 3 days or less)
   const urgentCount = subscriptions.filter((s) => {
@@ -66,16 +55,6 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
 
   const nextRenewal = upcomingSubscriptions.length > 0 ? upcomingSubscriptions[0] : null;
   const nextRenewalRel = nextRenewal ? getRelativeDateLabel(nextRenewal.daysUntil) : null;
-  const nextRenewalCategory = nextRenewal ? CATEGORIES[nextRenewal.category] : null;
-
-  // Converted next renewal values
-  const nextRenewalRawCurrency = nextRenewal?.currency || preferredCurrency;
-  const nextRenewalConvertedAmount = nextRenewal
-    ? convertFn
-      ? convertFn(nextRenewal.amount, nextRenewalRawCurrency, preferredCurrency)
-      : nextRenewal.amount
-    : 0;
-  const isNextRenewalConverted = nextRenewal && nextRenewalRawCurrency !== preferredCurrency;
 
   return (
     <section className="space-y-4">
@@ -119,7 +98,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
       {/* Main Metric Cards Grid (3 Cards: Mensal Total, Projeção Anual, Próximo Vencimento) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        {/* Card 1: Mensal Total (Calculado Dinamicamente) */}
+        {/* Card 1: Mensal Total */}
         <div
           id="card-monthly-total"
           className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-br from-teal-800 via-teal-900 to-slate-900 text-white shadow-lg shadow-teal-950/15 border border-teal-700/50 flex flex-col justify-between"
@@ -146,11 +125,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
 
             <div className="flex items-baseline gap-1 my-1">
               <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-sans text-white">
-                {isLoadingRates ? (
-                  <span className="inline-block animate-pulse text-teal-300">...</span>
-                ) : (
-                  formatCurrency(monthlyTotal, preferredCurrency)
-                )}
+                {formatCurrency(monthlyTotal)}
               </h2>
               <span className="text-teal-300 text-sm font-medium">/mês</span>
             </div>
@@ -159,16 +134,12 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
           <div className="mt-4 pt-3 border-t border-teal-700/60 flex items-center justify-between text-xs text-teal-200/90">
             <span>Média por assinatura:</span>
             <span className="font-bold text-white text-sm">
-              {isLoadingRates ? (
-                <span className="animate-pulse">...</span>
-              ) : (
-                `${formatCurrency(activeCount > 0 ? monthlyTotal / activeCount : 0, preferredCurrency)}/serviço`
-              )}
+              {`${formatCurrency(activeCount > 0 ? monthlyTotal / activeCount : 0)}/serviço`}
             </span>
           </div>
         </div>
 
-        {/* Card 2: Projeção Anual (Calculada Dinamicamente) */}
+        {/* Card 2: Projeção Anual */}
         <div
           id="card-annual-projection"
           className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between"
@@ -188,11 +159,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
 
             <div className="space-y-1">
               <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                {isLoadingRates ? (
-                  <span className="inline-block animate-pulse text-slate-400">...</span>
-                ) : (
-                  formatCurrency(yearlyTotal, preferredCurrency)
-                )}
+                {formatCurrency(yearlyTotal)}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Custo estimado nos próximos 365 dias
@@ -203,12 +170,12 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
             <span>Economia com pausadas:</span>
             <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-              +{formatCurrency(pausedSavings, preferredCurrency)}/mês
+              +{formatCurrency(pausedSavings)}/mês
             </span>
           </div>
         </div>
 
-        {/* Card 3: Próximo Vencimento (Calculado Dinamicamente da Assinatura Mais Próxima) */}
+        {/* Card 3: Próximo Vencimento */}
         <div
           id="card-next-renewal"
           className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between"
@@ -259,13 +226,8 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
 
                   <div className="text-right shrink-0">
                     <span className="text-base font-extrabold text-slate-900 dark:text-white block">
-                      {formatCurrency(nextRenewalConvertedAmount, preferredCurrency)}
+                      {formatCurrency(nextRenewal.amount)}
                     </span>
-                    {isNextRenewalConverted && (
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 block -mt-0.5">
-                        ({formatCurrency(nextRenewal.amount, nextRenewalRawCurrency)})
-                      </span>
-                    )}
                     <span className="text-[11px] text-slate-400 dark:text-slate-500">
                       {nextRenewal.billingCycle === 'yearly' ? '/ano' : nextRenewal.billingCycle === 'weekly' ? '/sem' : '/mês'}
                     </span>
