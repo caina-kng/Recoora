@@ -24,6 +24,7 @@ interface DashboardSummaryProps {
   onFilterByUrgent?: () => void;
   onEdit?: (sub: Subscription) => void;
   onMarkAsPaid?: (id: string) => void;
+  onRequestPayment?: (sub: Subscription) => void;
 }
 
 export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
@@ -33,6 +34,7 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
   onFilterByUrgent,
   onEdit,
   onMarkAsPaid,
+  onRequestPayment,
 }) => {
   const { monthlyTotal, yearlyTotal, pausedSavings, activeCount } =
     calculateTotals(subscriptions);
@@ -248,17 +250,25 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
                 <button
                   type="button"
                   onClick={() => onEdit?.(nextRenewal)}
-                  className="text-teal-600 dark:text-teal-400 font-semibold hover:underline"
+                  className="text-teal-600 dark:text-teal-400 font-semibold hover:underline cursor-pointer"
                 >
                   Ver detalhes
                 </button>
-                {onMarkAsPaid && (
+                {(onRequestPayment || onMarkAsPaid) && (
                   <button
+                    id="btn-pay-next-cycle"
                     type="button"
-                    onClick={() => onMarkAsPaid(nextRenewal.id)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 font-semibold transition-colors"
+                    onClick={() => {
+                      if (onRequestPayment) {
+                        onRequestPayment(nextRenewal);
+                      } else if (onMarkAsPaid) {
+                        onMarkAsPaid(nextRenewal.id);
+                      }
+                    }}
+                    title="Confirmar pagamento e avançar para o próximo vencimento"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/70 hover:bg-teal-100 dark:hover:bg-teal-900/70 text-teal-700 dark:text-teal-300 font-bold transition-all shadow-2xs hover:shadow-xs cursor-pointer"
                   >
-                    <Check className="w-3 h-3" />
+                    <Check className="w-3.5 h-3.5" />
                     <span>Pagar ciclo</span>
                   </button>
                 )}

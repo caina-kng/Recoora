@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -10,6 +10,8 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
+  ChevronLeft,
   Edit2,
   Trash2,
   Pause,
@@ -33,6 +35,7 @@ interface SubscriptionListProps {
   onDelete: (id: string) => void;
   onToggleStatus: (id: string) => void;
   onMarkAsPaid: (id: string) => void;
+  onRequestPayment?: (sub: Subscription) => void;
   onOpenNewModal: () => void;
   onQuickAddPreset: (presetName: string) => void;
   onResetToSample: () => void;
@@ -47,12 +50,16 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
   onDelete,
   onToggleStatus,
   onMarkAsPaid,
+  onRequestPayment,
   onOpenNewModal,
   onQuickAddPreset,
   onResetToSample,
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const categoriesList = Object.values(CATEGORIES);
 
@@ -66,6 +73,27 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
     const days = getDaysUntil(s.nextBillingDate);
     return days >= 0 && days <= 3;
   }).length;
+
+  const checkFilterScroll = () => {
+    const el = filterScrollRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 2;
+    setCanScrollLeft(el.scrollLeft > 6);
+    setCanScrollRight(hasOverflow && el.scrollLeft < el.scrollWidth - el.clientWidth - 6);
+  };
+
+  useEffect(() => {
+    checkFilterScroll();
+    window.addEventListener('resize', checkFilterScroll);
+    return () => window.removeEventListener('resize', checkFilterScroll);
+  }, [categoriesList.length, subscriptions.length]);
+
+  const scrollFilters = (direction: 'left' | 'right') => {
+    const el = filterScrollRef.current;
+    if (!el) return;
+    const scrollAmount = 220;
+    el.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+  };
 
   // Sliced items if not expanded and more than 4 items exist
   const INITIAL_LIMIT = 4;
@@ -151,143 +179,177 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
 
         </div>
 
-        {/* Category & Status Filter Chips */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-          {/* Todas */}
-          <button
-            type="button"
-            onClick={() => setFilters((prev) => ({ ...prev, category: 'all', status: 'all' }))}
-            className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              filters.category === 'all' && filters.status === 'all'
-                ? 'bg-teal-600 dark:bg-teal-500 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Todas ({subscriptions.length})
-          </button>
+        {/* Category & Status Filter Chips - Horizontal scroll on mobile with gradient indicators + Desktop Flex Wrap */}
+        <div className="relative pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          {/* Left scroll fade/button indicator on mobile */}
+          {canScrollLeft && (
+            <div className="md:hidden absolute left-0 top-2 bottom-0 w-10 bg-gradient-to-r from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 pointer-events-none z-10 flex items-center pl-0.5">
+              <button
+                type="button"
+                onClick={() => scrollFilters('left')}
+                className="pointer-events-auto p-1 rounded-full bg-white/95 dark:bg-slate-800 shadow-xs text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:text-teal-600 cursor-pointer"
+                aria-label="Rolar filtros para a esquerda"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
-          {/* Ativas */}
-          <button
-            id="filter-active-subs"
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({
-                ...prev,
-                status: prev.status === 'active' ? 'all' : 'active',
-              }))
-            }
-            className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              filters.status === 'active'
-                ? 'bg-teal-700 dark:bg-teal-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Ativas ({activeCount})
-          </button>
+          {/* Right scroll fade/button indicator on mobile */}
+          {canScrollRight && (
+            <div className="md:hidden absolute right-0 top-2 bottom-0 w-12 bg-gradient-to-l from-white via-white/95 to-transparent dark:from-slate-900 dark:via-slate-900/95 pointer-events-none z-10 flex items-center justify-end pr-0.5">
+              <button
+                type="button"
+                onClick={() => scrollFilters('right')}
+                className="pointer-events-auto p-1 rounded-full bg-white/95 dark:bg-slate-800 shadow-xs text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:text-teal-600 cursor-pointer"
+                aria-label="Rolar mais filtros para a direita"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
-          {/* Pausadas */}
-          <button
-            id="filter-paused-subs"
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({
-                ...prev,
-                status: prev.status === 'paused' ? 'all' : 'paused',
-              }))
-            }
-            className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              filters.status === 'paused'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
+          <div
+            ref={filterScrollRef}
+            onScroll={checkFilterScroll}
+            className="flex items-center gap-1.5 overflow-x-auto md:flex-wrap pb-1.5 md:pb-0 scrollbar-none text-xs scroll-smooth"
           >
-            Pausadas ({pausedCount})
-          </button>
-
-          {/* Canceladas */}
-          <button
-            id="filter-cancelled-subs"
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({
-                ...prev,
-                status: prev.status === 'cancelled' ? 'all' : 'cancelled',
-              }))
-            }
-            className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              filters.status === 'cancelled'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Canceladas ({cancelledCount})
-          </button>
-
-          {/* Testes Grátis */}
-          <button
-            id="filter-trial-subs"
-            type="button"
-            onClick={() =>
-              setFilters((prev) => ({
-                ...prev,
-                status: prev.status === 'trial' ? 'all' : 'trial',
-              }))
-            }
-            className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              filters.status === 'trial'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Testes Grátis ({trialCount})
-          </button>
-
-          {/* Urgentes (≤ 3 dias) */}
-          {(urgentCount > 0 || filters.status === 'urgent') && (
+            {/* Todas */}
             <button
-              id="filter-urgent-subs"
+              type="button"
+              onClick={() => setFilters((prev) => ({ ...prev, category: 'all', status: 'all' }))}
+              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                filters.category === 'all' && filters.status === 'all'
+                  ? 'bg-teal-600 dark:bg-teal-500 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Todas ({subscriptions.length})
+            </button>
+
+            {/* Ativas */}
+            <button
+              id="filter-active-subs"
               type="button"
               onClick={() =>
                 setFilters((prev) => ({
                   ...prev,
-                  status: prev.status === 'urgent' ? 'all' : 'urgent',
+                  status: prev.status === 'active' ? 'all' : 'active',
                 }))
               }
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                filters.status === 'urgent'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                filters.status === 'active'
+                  ? 'bg-teal-700 dark:bg-teal-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Urgentes ({urgentCount})</span>
+              Ativas ({activeCount})
             </button>
-          )}
 
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1 shrink-0" />
+            {/* Pausadas */}
+            <button
+              id="filter-paused-subs"
+              type="button"
+              onClick={() =>
+                setFilters((prev) => ({
+                  ...prev,
+                  status: prev.status === 'paused' ? 'all' : 'paused',
+                }))
+              }
+              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                filters.status === 'paused'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Pausadas ({pausedCount})
+            </button>
 
-          {/* Category Chips */}
-          {categoriesList.map((cat) => {
-            const count = subscriptions.filter((s) => s.category === cat.id).length;
-            const isSelected = filters.category === cat.id;
+            {/* Canceladas */}
+            <button
+              id="filter-cancelled-subs"
+              type="button"
+              onClick={() =>
+                setFilters((prev) => ({
+                  ...prev,
+                  status: prev.status === 'cancelled' ? 'all' : 'cancelled',
+                }))
+              }
+              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                filters.status === 'cancelled'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Canceladas ({cancelledCount})
+            </button>
 
-            return (
+            {/* Testes Grátis */}
+            <button
+              id="filter-trial-subs"
+              type="button"
+              onClick={() =>
+                setFilters((prev) => ({
+                  ...prev,
+                  status: prev.status === 'trial' ? 'all' : 'trial',
+                }))
+              }
+              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                filters.status === 'trial'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Testes Grátis ({trialCount})
+            </button>
+
+            {/* Urgentes (≤ 3 dias) */}
+            {(urgentCount > 0 || filters.status === 'urgent') && (
               <button
-                key={cat.id}
+                id="filter-urgent-subs"
                 type="button"
-                onClick={() => setFilters((prev) => ({ ...prev, category: isSelected ? 'all' : cat.id }))}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                  isSelected
-                    ? 'bg-teal-600 dark:bg-teal-500 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    status: prev.status === 'urgent' ? 'all' : 'urgent',
+                  }))
+                }
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                  filters.status === 'urgent'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-100 dark:hover:bg-amber-900/60'
                 }`}
               >
-                <CategoryIcon category={cat.id} className="w-3.5 h-3.5" />
-                <span>{cat.label}</span>
-                {count > 0 && <span className="text-[10px] opacity-75">({count})</span>}
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Urgentes ({urgentCount})</span>
               </button>
-            );
-          })}
+            )}
+
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1 shrink-0" />
+
+            {/* Category Chips */}
+            {categoriesList.map((cat) => {
+              const count = subscriptions.filter((s) => s.category === cat.id).length;
+              const isSelected = filters.category === cat.id;
+
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, category: isSelected ? 'all' : cat.id }))}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                    isSelected
+                      ? 'bg-teal-600 dark:bg-teal-500 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <CategoryIcon category={cat.id} className="w-3.5 h-3.5" />
+                  <span>{cat.label}</span>
+                  {count > 0 && <span className="text-[10px] opacity-75">({count})</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -352,6 +414,7 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
                   onDelete={onDelete}
                   onToggleStatus={onToggleStatus}
                   onMarkAsPaid={onMarkAsPaid}
+                  onRequestPayment={onRequestPayment}
                 />
               ))}
             </div>
@@ -419,9 +482,15 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => onMarkAsPaid(sub.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors"
-                          title="Marcar como paga"
+                          onClick={() => {
+                            if (onRequestPayment) {
+                              onRequestPayment(sub);
+                            } else {
+                              onMarkAsPaid(sub.id);
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors cursor-pointer"
+                          title="Pagar ciclo (+1 período)"
                         >
                           <Check className="w-4 h-4" />
                         </button>

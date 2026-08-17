@@ -27,6 +27,7 @@ interface SubscriptionCardProps {
   onDelete: (id: string) => void;
   onToggleStatus: (id: string) => void;
   onMarkAsPaid: (id: string) => void;
+  onRequestPayment?: (sub: Subscription) => void;
 }
 
 export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
@@ -35,6 +36,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
   onDelete,
   onToggleStatus,
   onMarkAsPaid,
+  onRequestPayment,
 }) => {
   const [showMenu, setShowMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -196,12 +198,16 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = ({
                   type="button"
                   onClick={() => {
                     setShowMenu(false);
-                    onMarkAsPaid(subscription.id);
+                    if (onRequestPayment) {
+                      onRequestPayment(subscription);
+                    } else {
+                      onMarkAsPaid(subscription.id);
+                    }
                   }}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5 text-emerald-500" />
-                  Marcar como Paga (+1 ciclo)
+                  Pagar ciclo (+1 período)
                 </button>
 
                 <div className="my-1 border-t border-slate-100 dark:border-slate-800" />

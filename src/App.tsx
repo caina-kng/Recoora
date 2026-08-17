@@ -13,6 +13,7 @@ import { SubscriptionFormModal } from './components/SubscriptionFormModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { ExportImportModal } from './components/ExportImportModal';
 import { AccountModal } from './components/AccountModal';
+import { PaymentConfirmModal } from './components/PaymentConfirmModal';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { Subscription, UserProfile } from './types';
@@ -73,6 +74,7 @@ export default function App() {
   const [subscriptionToDelete, setSubscriptionToDelete] = useState<Subscription | null>(null);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [subscriptionToConfirmPayment, setSubscriptionToConfirmPayment] = useState<Subscription | null>(null);
 
   // Toast feedback state
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -151,13 +153,15 @@ export default function App() {
     }
   };
 
-  // Mark as Paid
-  const handleMarkAsPaid = (id: string) => {
-    const sub = subscriptions.find((s) => s.id === id);
-    markAsPaid(id);
-    if (sub) {
-      addToast('Pagamento registrado!', `Próxima cobrança de ${sub.name} avançada para o próximo ciclo.`);
-    }
+  // Mark as Paid Request and Confirmation
+  const handleRequestPayment = (sub: Subscription) => {
+    setSubscriptionToConfirmPayment(sub);
+  };
+
+  const handleConfirmPayment = (sub: Subscription) => {
+    markAsPaid(sub.id);
+    setSubscriptionToConfirmPayment(null);
+    addToast('Pagamento registrado!', `Próxima cobrança de ${sub.name} avançada para o próximo ciclo.`);
   };
 
   // Convert Trial to Active Paid
@@ -289,7 +293,7 @@ export default function App() {
           onFilterByTrial={() => setFilters((prev) => ({ ...prev, status: 'trial' }))}
           onFilterByUrgent={handleFilterUrgent}
           onEdit={handleOpenEditModal}
-          onMarkAsPaid={handleMarkAsPaid}
+          onRequestPayment={handleRequestPayment}
         />
 
         {/* Free Trials Highlight Section (if any active trials) */}
@@ -305,8 +309,9 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <UpcomingRenewals
               subscriptions={subscriptions}
-              onMarkAsPaid={handleMarkAsPaid}
+              onRequestPayment={handleRequestPayment}
               onEdit={handleOpenEditModal}
+              onOpenNewModal={handleOpenAddModal}
             />
             <CategoryChart
               subscriptions={subscriptions}
@@ -335,7 +340,8 @@ export default function App() {
             onEdit={handleOpenEditModal}
             onDelete={handleOpenDeleteModal}
             onToggleStatus={handleToggleStatus}
-            onMarkAsPaid={handleMarkAsPaid}
+            onMarkAsPaid={markAsPaid}
+            onRequestPayment={handleRequestPayment}
             onOpenNewModal={handleOpenAddModal}
             onQuickAddPreset={handleQuickAddPreset}
             onResetToSample={() => {
@@ -373,6 +379,13 @@ export default function App() {
         editingSubscription={editingSubscription}
       />
 
+      <PaymentConfirmModal
+        isOpen={!!subscriptionToConfirmPayment}
+        onClose={() => setSubscriptionToConfirmPayment(null)}
+        subscription={subscriptionToConfirmPayment}
+        onConfirm={handleConfirmPayment}
+      />
+
       <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => {
@@ -387,6 +400,7 @@ export default function App() {
         isOpen={isExportImportOpen}
         onClose={() => setIsExportImportOpen(false)}
         subscriptions={subscriptions}
+        userProfile={userProfile}
         onImport={(imported) => {
           importSubscriptions(imported);
           addToast('Backup restaurado!', `${imported.length} assinaturas carregadas.`);
