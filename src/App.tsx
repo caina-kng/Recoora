@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Plus } from 'lucide-react';
 import { useSubscriptions } from './hooks/useSubscriptions';
+import { useCurrencyRates } from './hooks/useCurrencyRates';
 import { useTheme } from './hooks/useTheme';
 import { Header } from './components/Header';
 import { DashboardSummary } from './components/DashboardSummary';
@@ -11,6 +13,7 @@ import { SubscriptionList } from './components/SubscriptionList';
 import { SubscriptionFormModal } from './components/SubscriptionFormModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { ExportImportModal } from './components/ExportImportModal';
+import { AccountModal } from './components/AccountModal';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { Subscription, UserProfile } from './types';
@@ -21,6 +24,31 @@ const USER_PROFILE_STORAGE_KEY = 'recorra_user_profile';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
+
+  // Currency conversion engine with Frankfurter API + caching
+  const [activePreferredCurrency, setActivePreferredCurrency] = useState<'BRL' | 'USD' | 'EUR'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('recorra_preferred_currency');
+        if (saved === 'BRL' || saved === 'USD' || saved === 'EUR') {
+          return saved;
+        }
+      } catch (err) {
+        console.error('Error reading currency from localStorage:', err);
+      }
+    }
+    return 'BRL';
+  });
+
+  const {
+    rates,
+    isLoading: isLoadingRates,
+    isError: isRatesError,
+    isUsingFallback,
+    convert,
+    refreshRates,
+  } = useCurrencyRates();
+
   const {
     subscriptions,
     filteredSubscriptions,
@@ -39,7 +67,13 @@ export default function App() {
     resetToSampleData,
     clearAllSubscriptions,
     importSubscriptions,
-  } = useSubscriptions();
+  } = useSubscriptions(convert);
+
+  // Sync preferred currency changes
+  const handlePreferredCurrencyChange = (newCurrency: 'BRL' | 'USD' | 'EUR') => {
+    setActivePreferredCurrency(newCurrency);
+    setPreferredCurrency(newCurrency);
+  };
 
   // Onboarding & User Profile State
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(() => {
@@ -73,6 +107,7 @@ export default function App() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [subscriptionToDelete, setSubscriptionToDelete] = useState<Subscription | null>(null);
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   // Toast feedback state
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -87,6 +122,17 @@ export default function App() {
 
   const handleDismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // User Profile Update handler
+  const handleSaveUserProfile = (updatedProfile: UserProfile) => {
+    setUserProfile(updatedProfile);
+    try {
+      localStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(updatedProfile));
+    } catch (err) {
+      console.error('Error saving user profile to localStorage:', err);
+    }
+    addToast('Dados atualizados com sucesso', 'Suas informações de perfil foram salvas.');
   };
 
   // Open Add Modal
@@ -263,8 +309,10 @@ export default function App() {
           toggleTheme={toggleTheme}
           onOpenNewModal={handleOpenAddModal}
           onOpenExportImport={() => setIsExportImportOpen(true)}
+          onOpenAccountModal={() => setIsAccountModalOpen(true)}
           preferredCurrency={preferredCurrency}
-          setPreferredCurrency={setPreferredCurrency}
+          setPreferredCurrency={handlePreferredCurrencyChange}
+          isLoadingRates={isLoadingRates}
           totalActiveCount={subscriptions.filter((s) => s.status === 'active').length}
           userProfile={userProfile}
         />
@@ -276,6 +324,8 @@ export default function App() {
         <DashboardSummary
           subscriptions={subscriptions}
           preferredCurrency={preferredCurrency}
+          convertFn={convert}
+          isLoadingRates={isLoadingRates}
           onFilterByStatus={(status) => setFilters((prev) => ({ ...prev, status }))}
           onFilterByTrial={() => setFilters((prev) => ({ ...prev, status: 'trial' }))}
           onFilterByUrgent={handleFilterUrgent}
@@ -287,6 +337,7 @@ export default function App() {
         <TrialAlertsSection
           subscriptions={subscriptions}
           preferredCurrency={preferredCurrency}
+          convertFn={convert}
           onConvertTrial={handleConvertTrial}
           onCancelSubscription={handleCancelSubscription}
           onEdit={handleOpenEditModal}
@@ -298,12 +349,14 @@ export default function App() {
             <UpcomingRenewals
               subscriptions={subscriptions}
               preferredCurrency={preferredCurrency}
+              convertFn={convert}
               onMarkAsPaid={handleMarkAsPaid}
               onEdit={handleOpenEditModal}
             />
             <CategoryChart
               subscriptions={subscriptions}
               preferredCurrency={preferredCurrency}
+              convertFn={convert}
               selectedCategory={filters.category}
               onSelectCategory={handleSelectCategoryFromChart}
             />
@@ -327,6 +380,7 @@ export default function App() {
             filters={filters}
             setFilters={setFilters}
             preferredCurrency={preferredCurrency}
+            convertFn={convert}
             onEdit={handleOpenEditModal}
             onDelete={handleOpenDeleteModal}
             onToggleStatus={handleToggleStatus}
@@ -396,6 +450,25 @@ export default function App() {
           addToast('Dados limpos', 'Todas as assinaturas foram removidas.', 'warning');
         }}
       />
+
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        userProfile={userProfile}
+        onSaveProfile={handleSaveUserProfile}
+        totalSubscriptionsCount={subscriptions.length}
+      />
+
+      {/* Mobile Floating Action Button (FAB) for quick add */}
+      <button
+        id="btn-fab-new-subscription"
+        onClick={handleOpenAddModal}
+        className="sm:hidden fixed bottom-6 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-sm shadow-xl shadow-teal-600/30 transition-all border border-teal-400/30"
+        aria-label="Adicionar Nova Assinatura"
+      >
+        <Plus className="w-5 h-5" />
+        <span>Nova</span>
+      </button>
 
       {/* Toast Feedback Notifications */}
       <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />

@@ -51,23 +51,34 @@ export function getYearlyEquivalent(amount: number, billingCycle: Subscription['
 }
 
 /**
- * Calculates total active monthly spend and annual projection.
+ * Calculates total active monthly spend and annual projection, converting each subscription to the target currency.
  */
-export function calculateTotals(subscriptions: Subscription[]) {
+export function calculateTotals(
+  subscriptions: Subscription[],
+  targetCurrency: SupportedCurrency = 'BRL',
+  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number
+) {
   let monthlyTotal = 0;
   let activeCount = 0;
   let pausedCount = 0;
   let trialCount = 0;
+  let pausedSavings = 0;
 
   subscriptions.forEach((sub) => {
+    const rawAmount = sub.amount;
+    const subCurrency = sub.currency || targetCurrency;
+    const convertedAmount = convertFn ? convertFn(rawAmount, subCurrency, targetCurrency) : rawAmount;
+    const monthlyEquivalent = getMonthlyEquivalent(convertedAmount, sub.billingCycle);
+
     if (sub.status === 'active') {
-      monthlyTotal += getMonthlyEquivalent(sub.amount, sub.billingCycle);
+      monthlyTotal += monthlyEquivalent;
       activeCount++;
       if (sub.isTrial) {
         trialCount++;
       }
     } else if (sub.status === 'paused') {
       pausedCount++;
+      pausedSavings += monthlyEquivalent;
     }
   });
 
@@ -76,6 +87,7 @@ export function calculateTotals(subscriptions: Subscription[]) {
   return {
     monthlyTotal,
     yearlyTotal,
+    pausedSavings,
     activeCount,
     pausedCount,
     trialCount,
@@ -162,16 +174,23 @@ export interface CategoryBreakdownItem {
 }
 
 /**
- * Groups active monthly costs by category.
+ * Groups active monthly costs by category converted into target currency.
  */
-export function getCategoryBreakdown(subscriptions: Subscription[]): CategoryBreakdownItem[] {
+export function getCategoryBreakdown(
+  subscriptions: Subscription[],
+  targetCurrency: SupportedCurrency = 'BRL',
+  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number
+): CategoryBreakdownItem[] {
   const map = new Map<SubscriptionCategory, { amount: number; count: number }>();
 
   let totalMonthly = 0;
 
   subscriptions.forEach((sub) => {
     if (sub.status !== 'active') return;
-    const monthlyCost = getMonthlyEquivalent(sub.amount, sub.billingCycle);
+    const rawAmount = sub.amount;
+    const subCurrency = sub.currency || targetCurrency;
+    const convertedAmount = convertFn ? convertFn(rawAmount, subCurrency, targetCurrency) : rawAmount;
+    const monthlyCost = getMonthlyEquivalent(convertedAmount, sub.billingCycle);
     totalMonthly += monthlyCost;
 
     const current = map.get(sub.category) || { amount: 0, count: 0 };

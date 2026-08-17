@@ -35,6 +35,7 @@ interface SubscriptionListProps {
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   preferredCurrency: SupportedCurrency;
+  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number;
   onEdit: (sub: Subscription) => void;
   onDelete: (id: string) => void;
   onToggleStatus: (id: string) => void;
@@ -50,6 +51,7 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
   filters,
   setFilters,
   preferredCurrency,
+  convertFn,
   onEdit,
   onDelete,
   onToggleStatus,
@@ -356,6 +358,7 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
                   key={sub.id}
                   subscription={sub}
                   preferredCurrency={preferredCurrency}
+                  convertFn={convertFn}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onToggleStatus={onToggleStatus}
@@ -372,6 +375,10 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
                 const rel = getRelativeDateLabel(daysUntil);
                 const isPaused = sub.status === 'paused';
                 const isCancelled = sub.status === 'cancelled';
+
+                const rawCurrency = sub.currency || preferredCurrency;
+                const isConverted = rawCurrency !== preferredCurrency;
+                const convertedAmount = convertFn ? convertFn(sub.amount, rawCurrency, preferredCurrency) : sub.amount;
 
                 return (
                   <div
@@ -407,12 +414,22 @@ export const SubscriptionList: React.FC<SubscriptionListProps> = ({
 
                     <div className="flex items-center justify-between sm:justify-end gap-4" onClick={(e) => e.stopPropagation()}>
                       <div className="text-left sm:text-right">
-                        <span className="font-extrabold text-slate-900 dark:text-white text-sm">
-                          {formatCurrency(sub.amount, sub.currency || preferredCurrency)}
-                        </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
-                          /{sub.billingCycle === 'yearly' ? 'ano' : sub.billingCycle === 'weekly' ? 'sem' : 'mês'}
-                        </span>
+                        <div>
+                          <span className="font-extrabold text-slate-900 dark:text-white text-sm">
+                            {formatCurrency(convertedAmount, preferredCurrency)}
+                          </span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500 ml-1">
+                            /{sub.billingCycle === 'yearly' ? 'ano' : sub.billingCycle === 'weekly' ? 'sem' : 'mês'}
+                          </span>
+                        </div>
+                        {isConverted && (
+                          <span
+                            className="block text-[10px] text-slate-400 dark:text-slate-500 font-medium"
+                            title={`Valor original: ${formatCurrency(sub.amount, rawCurrency)}`}
+                          >
+                            ({formatCurrency(sub.amount, rawCurrency)})
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Sun, Moon, Sparkles, Download, RefreshCw, Layers } from 'lucide-react';
+import { Plus, Sun, Moon, Download, User } from 'lucide-react';
 import { SupportedCurrency, UserProfile } from '../types';
 
 interface HeaderProps {
@@ -7,8 +7,10 @@ interface HeaderProps {
   toggleTheme: () => void;
   onOpenNewModal: () => void;
   onOpenExportImport: () => void;
+  onOpenAccountModal: () => void;
   preferredCurrency: SupportedCurrency;
   setPreferredCurrency: (c: SupportedCurrency) => void;
+  isLoadingRates?: boolean;
   totalActiveCount: number;
   userProfile?: UserProfile | null;
 }
@@ -18,19 +20,26 @@ export const Header: React.FC<HeaderProps> = ({
   toggleTheme,
   onOpenNewModal,
   onOpenExportImport,
+  onOpenAccountModal,
   preferredCurrency,
   setPreferredCurrency,
+  isLoadingRates = false,
   totalActiveCount,
   userProfile,
 }) => {
+  const userInitial = userProfile?.name?.trim() ? userProfile.name.trim().charAt(0).toUpperCase() : 'U';
+  const firstName = userProfile?.name?.trim() ? userProfile.name.trim().split(' ')[0] : 'Usuário';
+
   return (
-    <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8">
+        
+        {/* DESKTOP HEADER (sm:flex) - Preserved exactly */}
+        <div className="hidden sm:flex items-center justify-between h-20">
           
           {/* Logo & Brand Identity */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-600 dark:bg-teal-500 text-white flex items-center justify-center shadow-md shadow-teal-600/20 font-extrabold text-xl tracking-tight">
+            <div className="w-10 h-10 rounded-xl bg-teal-600 dark:bg-teal-500 text-white flex items-center justify-center shadow-md shadow-teal-600/20 font-extrabold text-xl tracking-tight shrink-0">
               R
             </div>
             <div>
@@ -38,14 +47,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Recorra
                 </span>
-                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800">
                   {totalActiveCount} ativas
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {userProfile?.name ? (
                   <>
-                    Olá, <span className="font-semibold text-slate-700 dark:text-slate-300">{userProfile.name.split(' ')[0]}</span> &bull; Gestão inteligente de assinaturas
+                    Olá, <span className="font-semibold text-slate-700 dark:text-slate-300">{firstName}</span> &bull; Gestão inteligente de assinaturas
                   </>
                 ) : (
                   'Gestão inteligente de assinaturas & recorrências'
@@ -54,24 +63,24 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Actions & Utilities */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Desktop Actions & Utilities */}
+          <div className="flex items-center gap-2.5 lg:gap-3">
             
             {/* Currency Selector */}
-            <div className="relative">
+            <div className="relative flex items-center">
               <select
                 id="currency-selector"
                 value={preferredCurrency}
                 onChange={(e) => setPreferredCurrency(e.target.value as SupportedCurrency)}
                 className="appearance-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold rounded-lg px-2.5 py-1.5 pr-6 cursor-pointer border border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
-                title="Alterar moeda padrão"
+                title={`Moeda de visualização: ${preferredCurrency} (Cotação automática Frankfurter)`}
               >
                 <option value="BRL">R$ (BRL)</option>
                 <option value="USD">$ (USD)</option>
                 <option value="EUR">€ (EUR)</option>
               </select>
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
-                ▼
+                {isLoadingRates ? '⏳' : '▼'}
               </span>
             </div>
 
@@ -83,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Backup e Exportação de Dados"
               aria-label="Backup e Exportação"
             >
-              <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Download className="w-5 h-5" />
             </button>
 
             {/* Dark Mode Toggle */}
@@ -95,10 +104,23 @@ export const Header: React.FC<HeaderProps> = ({
               aria-label="Alternar tema"
             >
               {theme === 'dark' ? (
-                <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+                <Sun className="w-5 h-5 text-amber-400" />
               ) : (
-                <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
+                <Moon className="w-5 h-5 text-slate-600" />
               )}
+            </button>
+
+            {/* Account / Profile Button */}
+            <button
+              id="btn-account-profile-desktop"
+              onClick={onOpenAccountModal}
+              className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
+              title="Minha Conta e Perfil"
+            >
+              <div className="w-6 h-6 rounded-lg bg-teal-600 dark:bg-teal-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                {userInitial}
+              </div>
+              <span className="max-w-[90px] truncate">{firstName}</span>
             </button>
 
             {/* Primary Action Button */}
@@ -114,7 +136,103 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
         </div>
+
+        {/* MOBILE HEADER (sm:hidden) - Multi-line responsive structure */}
+        <div className="sm:hidden py-2.5 space-y-2.5">
+          
+          {/* Mobile Line 1: Logo + "Recorra" Title + Profile Account Button */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-teal-600 dark:bg-teal-500 text-white flex items-center justify-center shadow-md shadow-teal-600/20 font-extrabold text-lg tracking-tight shrink-0">
+                R
+              </div>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                  Recorra
+                </span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800 shrink-0">
+                  {totalActiveCount} ativas
+                </span>
+              </div>
+            </div>
+
+            {/* Mobile Profile / Minha Conta Button */}
+            <button
+              id="btn-account-profile-mobile"
+              onClick={onOpenAccountModal}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold active:bg-slate-200 dark:active:bg-slate-700 transition-colors border border-slate-200/60 dark:border-slate-700/60 shrink-0"
+              title="Acessar Minha Conta"
+            >
+              <div className="w-5 h-5 rounded-md bg-teal-600 dark:bg-teal-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                {userInitial}
+              </div>
+              <span className="text-xs">{firstName}</span>
+            </button>
+          </div>
+
+          {/* Mobile Line 2: Grouped Utilities (Currency, Export/Import, Theme Toggle) */}
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+            {/* Currency Selector */}
+            <div className="relative flex-1 max-w-[130px]">
+              <select
+                id="currency-selector-mobile"
+                value={preferredCurrency}
+                onChange={(e) => setPreferredCurrency(e.target.value as SupportedCurrency)}
+                className="w-full appearance-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1.5 pr-6 cursor-pointer border border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors"
+                title={`Moeda: ${preferredCurrency}`}
+              >
+                <option value="BRL">R$ (BRL)</option>
+                <option value="USD">$ (USD)</option>
+                <option value="EUR">€ (EUR)</option>
+              </select>
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
+                {isLoadingRates ? '⏳' : '▼'}
+              </span>
+            </div>
+
+            {/* Utility Actions Group */}
+            <div className="flex items-center gap-1">
+              <button
+                id="btn-export-import-mobile"
+                onClick={onOpenExportImport}
+                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg bg-slate-100 dark:bg-slate-800 transition-colors flex items-center gap-1 px-2 text-xs font-medium"
+                title="Backup e Exportação"
+                aria-label="Backup"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Backup</span>
+              </button>
+
+              <button
+                id="theme-toggle-btn-mobile"
+                onClick={toggleTheme}
+                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg bg-slate-100 dark:bg-slate-800 transition-colors"
+                title={theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}
+                aria-label="Alternar tema"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-4 h-4 text-amber-400" />
+                ) : (
+                  <Moon className="w-4 h-4 text-slate-600" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Line 3: Full-width "Nova Assinatura" Button */}
+          <button
+            id="btn-new-subscription-mobile"
+            onClick={onOpenNewModal}
+            className="w-full py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nova Assinatura</span>
+          </button>
+
+        </div>
+
       </div>
     </header>
   );
 };
+

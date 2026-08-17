@@ -8,6 +8,7 @@ import { CategoryIcon } from './CategoryIcon';
 interface CategoryChartProps {
   subscriptions: Subscription[];
   preferredCurrency: SupportedCurrency;
+  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number;
   selectedCategory: string;
   onSelectCategory: (cat: string) => void;
 }
@@ -15,10 +16,11 @@ interface CategoryChartProps {
 export const CategoryChart: React.FC<CategoryChartProps> = ({
   subscriptions,
   preferredCurrency,
+  convertFn,
   selectedCategory,
   onSelectCategory,
 }) => {
-  const breakdown = getCategoryBreakdown(subscriptions);
+  const breakdown = getCategoryBreakdown(subscriptions, preferredCurrency, convertFn);
   const totalMonthly = breakdown.reduce((acc, item) => acc + item.amount, 0);
 
   if (breakdown.length === 0) {

@@ -7,7 +7,7 @@ const STORAGE_KEY = 'recorra_subscriptions_v2';
 const CURRENCY_KEY = 'recorra_preferred_currency';
 const ONBOARDING_KEY = 'recorra_onboarding_completed';
 
-export function useSubscriptions() {
+export function useSubscriptions(convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -179,22 +179,29 @@ export function useSubscriptions() {
         return true;
       })
       .sort((a, b) => {
+        const getSubMonthlyInPreferred = (sub: Subscription) => {
+          const rawAmount = sub.amount;
+          const subCurr = sub.currency || preferredCurrency;
+          const converted = convertFn ? convertFn(rawAmount, subCurr, preferredCurrency) : rawAmount;
+          return getMonthlyEquivalent(converted, sub.billingCycle);
+        };
+
         switch (filters.sortBy) {
           case 'date_asc':
             return new Date(a.nextBillingDate).getTime() - new Date(b.nextBillingDate).getTime();
           case 'date_desc':
             return new Date(b.nextBillingDate).getTime() - new Date(a.nextBillingDate).getTime();
           case 'amount_desc':
-            return getMonthlyEquivalent(b.amount, b.billingCycle) - getMonthlyEquivalent(a.amount, a.billingCycle);
+            return getSubMonthlyInPreferred(b) - getSubMonthlyInPreferred(a);
           case 'amount_asc':
-            return getMonthlyEquivalent(a.amount, a.billingCycle) - getMonthlyEquivalent(b.amount, b.billingCycle);
+            return getSubMonthlyInPreferred(a) - getSubMonthlyInPreferred(b);
           case 'name_asc':
             return a.name.localeCompare(b.name, 'pt-BR');
           default:
             return 0;
         }
       });
-  }, [subscriptions, filters]);
+  }, [subscriptions, filters, preferredCurrency, convertFn]);
 
   // Urgent upcoming renewals (Active & next 3 days)
   const urgentRenewals = useMemo(() => {

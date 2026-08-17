@@ -8,6 +8,7 @@ import { CategoryIcon } from './CategoryIcon';
 interface UpcomingRenewalsProps {
   subscriptions: Subscription[];
   preferredCurrency: SupportedCurrency;
+  convertFn?: (amount: number, from: SupportedCurrency, to: SupportedCurrency) => number;
   onMarkAsPaid: (id: string) => void;
   onEdit: (sub: Subscription) => void;
 }
@@ -15,6 +16,7 @@ interface UpcomingRenewalsProps {
 export const UpcomingRenewals: React.FC<UpcomingRenewalsProps> = ({
   subscriptions,
   preferredCurrency,
+  convertFn,
   onMarkAsPaid,
   onEdit,
 }) => {
@@ -57,6 +59,10 @@ export const UpcomingRenewals: React.FC<UpcomingRenewalsProps> = ({
           const isUrgent = sub.daysUntil >= 0 && sub.daysUntil <= 3;
           const isWarning = sub.daysUntil > 3 && sub.daysUntil <= 7;
           const categoryMeta = CATEGORIES[sub.category];
+
+          const rawCurrency = sub.currency || preferredCurrency;
+          const isConverted = rawCurrency !== preferredCurrency;
+          const convertedAmount = convertFn ? convertFn(sub.amount, rawCurrency, preferredCurrency) : sub.amount;
 
           return (
             <div
@@ -105,10 +111,18 @@ export const UpcomingRenewals: React.FC<UpcomingRenewalsProps> = ({
               <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                 <div className="text-right">
                   <div className="font-bold text-sm text-slate-900 dark:text-white">
-                    {formatCurrency(sub.amount, sub.currency || preferredCurrency)}
+                    {formatCurrency(convertedAmount, preferredCurrency)}
                   </div>
+                  {isConverted && (
+                    <span
+                      className="block text-[10px] text-slate-400 dark:text-slate-500 -mt-0.5"
+                      title={`Original: ${formatCurrency(sub.amount, rawCurrency)}`}
+                    >
+                      ({formatCurrency(sub.amount, rawCurrency)})
+                    </span>
+                  )}
                   <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-tight ${
+                    className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-tight mt-0.5 ${
                       isUrgent
                         ? 'bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800'
                         : isWarning
