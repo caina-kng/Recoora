@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { Download, Upload, FileSpreadsheet, FileText, X, Check, AlertCircle, RotateCcw, Trash2, ShieldCheck, HardDriveDownload } from 'lucide-react';
+import { Download, Upload, FileText, X, Check, AlertCircle, RotateCcw, Trash2, ShieldCheck, HardDriveDownload, Moon, Sun } from 'lucide-react';
 import { Subscription, UserProfile } from '../types';
-import { CATEGORIES } from '../data/categories';
-import { formatCurrency, formatDate } from '../utils/calculations';
 import { generateSubscriptionsPDF } from '../utils/pdfGenerator';
 
 interface ExportImportModalProps {
@@ -10,6 +8,7 @@ interface ExportImportModalProps {
   onClose: () => void;
   subscriptions: Subscription[];
   userProfile?: UserProfile | null;
+  theme?: 'light' | 'dark';
   onImport: (subscriptions: Subscription[]) => void;
   onResetToSample: () => void;
   onClearAll: () => void;
@@ -20,6 +19,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   onClose,
   subscriptions,
   userProfile = null,
+  theme = 'light',
   onImport,
   onResetToSample,
   onClearAll,
@@ -29,13 +29,19 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
   if (!isOpen) return null;
 
-  // 1. Export PDF (Primary highlight visual report)
+  const isDarkMode = theme === 'dark';
+
+  // 1. Export PDF (Adapts automatically to current theme: Light or Dark)
   const handleExportPDF = async () => {
     try {
       setIsGeneratingPDF(true);
-      generateSubscriptionsPDF(subscriptions, userProfile);
-      setImportStatus({ message: 'Relatório em PDF gerado com sucesso!', type: 'success' });
-      setTimeout(() => setImportStatus(null), 3000);
+      const activeTheme: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light';
+      generateSubscriptionsPDF(subscriptions, userProfile, activeTheme);
+      setImportStatus({ 
+        message: `Relatório em PDF gerado com sucesso no modo ${isDarkMode ? 'noturno' : 'claro'}!`, 
+        type: 'success' 
+      });
+      setTimeout(() => setImportStatus(null), 3200);
     } catch (err) {
       console.error('Error generating PDF:', err);
       setImportStatus({ message: 'Erro ao gerar relatório em PDF.', type: 'error' });
@@ -44,72 +50,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     }
   };
 
-  // 2. Export CSV / Excel (Human-friendly spreadsheet in PT-BR)
-  const handleExportCSV = () => {
-    const cycleLabels: Record<string, string> = {
-      monthly: 'Mensal',
-      yearly: 'Anual',
-      weekly: 'Semanal',
-    };
-
-    const statusLabels: Record<string, string> = {
-      active: 'Ativa',
-      paused: 'Pausada',
-      cancelled: 'Cancelada',
-    };
-
-    const headers = [
-      'Nome do Serviço',
-      'Categoria',
-      'Valor',
-      'Ciclo de Cobrança',
-      'Próximo Vencimento',
-      'Status',
-      'Teste Grátis',
-      'Notas',
-    ];
-
-    const rows = subscriptions.map((s) => {
-      const categoryLabel = CATEGORIES[s.category]?.label || s.category;
-      const cycleLabel = cycleLabels[s.billingCycle] || s.billingCycle;
-      const statusLabel = statusLabels[s.status] || s.status;
-      const formattedAmount = formatCurrency(s.amount);
-      const formattedDate = formatDate(s.nextBillingDate);
-      const trialLabel = s.isTrial ? 'Sim' : 'Não';
-      const notes = s.notes || '';
-
-      const escapeCSV = (value: string) => `"${value.replace(/"/g, '""')}"`;
-
-      return [
-        escapeCSV(s.name),
-        escapeCSV(categoryLabel),
-        escapeCSV(formattedAmount),
-        escapeCSV(cycleLabel),
-        escapeCSV(formattedDate),
-        escapeCSV(statusLabel),
-        escapeCSV(trialLabel),
-        escapeCSV(notes),
-      ];
-    });
-
-    // \uFEFF is the UTF-8 BOM so Microsoft Excel correctly renders Brazilian accents (ã, é, í, etc.) and currency symbols
-    const csvContent =
-      'data:text/csv;charset=utf-8,\uFEFF' +
-      [headers.map((h) => `"${h}"`).join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `recorra_planilha_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setImportStatus({ message: 'Planilha exportada com sucesso!', type: 'success' });
-    setTimeout(() => setImportStatus(null), 3000);
-  };
-
-  // 3. Technical Backup export
+  // 2. Technical Backup export
   const handleExportBackup = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(subscriptions, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -123,7 +64,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     setTimeout(() => setImportStatus(null), 3000);
   };
 
-  // 4. Restore from technical backup
+  // 3. Restore from technical backup
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -148,7 +89,6 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
       }
     };
     reader.readAsText(file);
-    // Clear value to allow selecting same file again if needed
     e.target.value = '';
   };
 
@@ -170,10 +110,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div>
             <h3 id="export-modal-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              Relatórios e Cópia de Segurança
+              Relatório e Cópia de Segurança
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Gere relatórios visuais, planilhas ou faça cópias de segurança de suas assinaturas.
+              Gere relatórios visuais formatados ou faça cópias de segurança de suas assinaturas.
             </p>
           </div>
           <button
@@ -207,7 +147,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         {/* Modal Scrollable Body */}
         <div className="py-4 space-y-4 overflow-y-auto pr-1">
           
-          {/* 1. PRIMARY HIGHLIGHT OPTION: Download PDF Report */}
+          {/* PRIMARY HIGHLIGHT OPTION: Download PDF Report (With theme badge) */}
           <div>
             <button
               id="btn-export-pdf-report"
@@ -221,55 +161,29 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   <FileText className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center flex-wrap gap-2">
                     <h4 className="text-base font-bold tracking-tight">
                       Baixar Relatório em PDF
                     </h4>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-500/50 text-teal-50 border border-teal-400/30">
-                      Recomendado
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-white/20 text-white border border-white/25">
+                      {isDarkMode ? <Moon className="w-2.5 h-2.5" /> : <Sun className="w-2.5 h-2.5" />}
+                      <span>{isDarkMode ? 'Tema Noturno' : 'Tema Claro'}</span>
                     </span>
                   </div>
                   <p className="text-xs text-teal-100 mt-1 leading-relaxed max-w-sm">
-                    Relatório visual completo pronto para salvar ou imprimir, com resumo mensal, projeção anual, divisão por categorias e tabela detalhada.
+                    Relatório visual formatado automaticamente no modo {isDarkMode ? 'noturno' : 'claro'}, com resumo mensal, projeção anual, divisão por categorias e tabela completa.
                   </p>
                 </div>
               </div>
-              <div className="w-full sm:w-auto px-4 py-2 rounded-xl bg-white text-teal-900 font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 shadow-xs group-hover:bg-teal-50 transition-colors">
+              <div className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white text-teal-900 font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 shadow-xs group-hover:bg-teal-50 transition-colors">
                 <Download className="w-4 h-4" />
                 <span>{isGeneratingPDF ? 'Gerando...' : 'Baixar PDF'}</span>
               </div>
             </button>
           </div>
 
-          {/* 2. SECONDARY OPTION: Export to Excel / CSV */}
-          <div>
-            <button
-              id="btn-export-excel-csv"
-              type="button"
-              onClick={handleExportCSV}
-              className="w-full p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/70 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 text-left transition-all group flex items-center justify-between gap-3 cursor-pointer shadow-2xs"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/70 dark:border-emerald-900/50 group-hover:scale-105 transition-transform">
-                  <FileSpreadsheet className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                    Exportar para Excel (Planilha)
-                  </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate sm:whitespace-normal">
-                    Para quem prefere trabalhar em planilhas • Formato compatível com Excel, Numbers e Google Sheets com valores em R$ e datas em português.
-                  </p>
-                </div>
-              </div>
-              <div className="p-2 rounded-xl text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/50 transition-colors shrink-0">
-                <Download className="w-4 h-4" />
-              </div>
-            </button>
-          </div>
-
           {/* VISUAL DIVIDER */}
-          <div className="relative py-2">
+          <div className="relative py-1">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200 dark:border-slate-800"></div>
             </div>
@@ -280,7 +194,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             </div>
           </div>
 
-          {/* 3. DISCREET BACKUP & RESTORATION SECTION (No technical JSON jargon) */}
+          {/* DISCREET BACKUP & RESTORATION SECTION (No technical JSON jargon) */}
           <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-3">
             <div className="flex items-start gap-2.5">
               <HardDriveDownload className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
@@ -321,7 +235,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             </div>
           </div>
 
-          {/* 4. BOTTOM ACTIONS: Reset to Sample / Clear All */}
+          {/* BOTTOM ACTIONS: Reset to Sample / Clear All */}
           <div className="pt-2 space-y-1.5">
             <button
               id="btn-restore-sample-data"

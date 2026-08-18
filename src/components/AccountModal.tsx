@@ -51,9 +51,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim()) {
-      newErrors.email = 'O e-mail é obrigatório.';
-    } else if (!emailRegex.test(email.trim())) {
+    if (email.trim() && !emailRegex.test(email.trim())) {
       newErrors.email = 'Insira um endereço de e-mail válido.';
     }
 
@@ -196,10 +194,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               )}
             </div>
 
-            {/* Input: E-mail */}
+            {/* Input: E-mail (Opcional) */}
             <div>
               <label htmlFor="account-email" className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                E-mail para Alertas e Notificações <span className="text-teal-600 dark:text-teal-400">*</span>
+                E-mail para Alertas <span className="text-slate-400 font-normal lowercase">(opcional)</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -213,7 +211,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     setEmail(e.target.value);
                     if (isTouched) validate();
                   }}
-                  placeholder="Ex: joao@email.com"
+                  placeholder="Ex: joao@email.com (opcional)"
                   className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-slate-50 dark:bg-slate-800/80 border text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-colors ${
                     errors.email
                       ? 'border-red-300 dark:border-red-800 focus:ring-red-500 focus:border-red-500 bg-red-50/30'
@@ -228,7 +226,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 </p>
               ) : (
                 <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                  Este endereço recebe os avisos de renovação e lembretes de cancelamento de testes.
+                  Opcional: este endereço pode ser usado para receber avisos e lembretes.
                 </p>
               )}
             </div>

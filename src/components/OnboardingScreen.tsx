@@ -30,19 +30,23 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   const [age, setAge] = useState<string>('');
   const [email, setEmail] = useState('');
 
-  // Touched state for immediate visual validation feedback
+  // Touched state for validation feedback
   const [touched, setTouched] = useState({
     name: false,
     age: false,
     email: false,
   });
 
-  // Validation rules
+  // Validation rules:
+  // Primary & mandatory: Name and Age
   const isNameValid = name.trim().length >= 2;
   const parsedAge = parseInt(age, 10);
   const isAgeValid = !isNaN(parsedAge) && parsedAge > 0 && parsedAge <= 120;
+  
+  // Optional: Email (only validates if the user chooses to fill it)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isEmailValid = emailRegex.test(email.trim());
+  const hasEmail = email.trim().length > 0;
+  const isEmailValid = !hasEmail || emailRegex.test(email.trim());
 
   const isFormValid = isNameValid && isAgeValid && isEmailValid;
 
@@ -123,7 +127,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4 pt-2" noValidate>
             
-            {/* Campo: Nome */}
+            {/* Campo: Nome (Obrigatório) */}
             <div className="space-y-1.5">
               <label
                 htmlFor="onboarding-name"
@@ -168,7 +172,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
               )}
             </div>
 
-            {/* Campo: Idade */}
+            {/* Campo: Idade (Obrigatório) */}
             <div className="space-y-1.5">
               <label
                 htmlFor="onboarding-age"
@@ -215,14 +219,19 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
               )}
             </div>
 
-            {/* Campo: E-mail */}
+            {/* Campo: E-mail (Opcional) */}
             <div className="space-y-1.5">
-              <label
-                htmlFor="onboarding-email"
-                className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300"
-              >
-                E-mail <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="onboarding-email"
+                  className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300"
+                >
+                  E-mail <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(opcional)</span>
+                </label>
+                <span className="text-[11px] text-teal-600 dark:text-teal-400 font-medium">
+                  Não obrigatório
+                </span>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Mail className="w-4 h-4" />
@@ -230,20 +239,19 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                 <input
                   id="onboarding-email"
                   type="email"
-                  placeholder="seu.email@exemplo.com"
+                  placeholder="seu.email@exemplo.com (opcional)"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
                   className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800/80 border text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none transition-all ${
-                    touched.email && !isEmailValid
+                    touched.email && hasEmail && !isEmailValid
                       ? 'border-rose-400 dark:border-rose-500 ring-2 ring-rose-500/20'
-                      : touched.email && isEmailValid
+                      : touched.email && hasEmail && isEmailValid
                       ? 'border-teal-500/80 ring-2 ring-teal-500/10'
                       : 'border-slate-200 dark:border-slate-700/80 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20'
                   }`}
-                  required
                 />
-                {touched.email && (
+                {touched.email && hasEmail && (
                   <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
                     {isEmailValid ? (
                       <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400" />
@@ -254,17 +262,17 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                 )}
               </div>
 
-              {/* Explicação clara sobre o uso do e-mail para notificações */}
-              <div className="p-2.5 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-900/60 flex items-start gap-2 text-xs text-teal-900 dark:text-teal-200 mt-1">
+              {/* Explicação clara sobre a opção de adicionar e-mail */}
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400 mt-1">
                 <Bell className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
                 <span>
-                  Este e-mail será usado para <strong>enviar alertas e notificações antecipadas</strong> sobre o vencimento das suas assinaturas e testes grátis.
+                  O e-mail é opcional e pode ser informado caso você queira receber alertas futuros sobre vencimentos e testes grátis.
                 </span>
               </div>
 
-              {touched.email && !isEmailValid && (
+              {touched.email && hasEmail && !isEmailValid && (
                 <p className="text-xs text-rose-500 font-medium flex items-center gap-1 mt-1">
-                  Por favor, informe um endereço de e-mail válido (ex: nome@dominio.com).
+                  Por favor, informe um endereço de e-mail válido (ex: nome@dominio.com) ou deixe em branco.
                 </p>
               )}
             </div>
@@ -281,7 +289,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300/40 dark:border-slate-700/40'
                 }`}
               >
-                <span>Começar</span>
+                <span>Entrar no Recorra</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

@@ -401,6 +401,7 @@ export default function App() {
         onClose={() => setIsExportImportOpen(false)}
         subscriptions={subscriptions}
         userProfile={userProfile}
+        theme={theme}
         onImport={(imported) => {
           importSubscriptions(imported);
           addToast('Backup restaurado!', `${imported.length} assinaturas carregadas.`);
